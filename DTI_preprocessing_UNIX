@@ -1,0 +1,67 @@
+SUBJECTS_DIR="path to your subjects directory"
+OUTPUT_DIR="      path to your output directory"
+
+mkdir -p "$OUTPUT_DIR"
+
+for subj in "$SUBJECTS_DIR"/SUB_*; do
+    subj_name=$(basename "$subj")
+    echo "Processing $subj_name..."
+
+    DWI="$subj/${subj_name}.nii.gz"
+    BVEC="$subj/${subj_name}.bvec"
+    BVAL="$subj/${subj_name}.bval"
+    REV="$subj/${subj_name}_rev.nii.gz"
+
+    fslroi "$DWI" "$subj/${subj_name}_b0.nii.gz" 0 1
+    fslroi "$REV" "$subj/${subj_name}_rev_b0.nii.gz" 0 1
+
+    fslmerge -t "$subj/${subj_name}_b0_all.nii.gz" \
+             "$subj/${subj_name}_rev_b0.nii.gz" \
+             "$subj/${subj_name}_b0.nii.gz"
+
+    topup --imain="$subj/${subj_name}_b0_all.nii.gz" \
+          --datain="$SUBJECTS_DIR/acqparams.txt" \
+          --config=b02b0.cnf \
+          --out="$subj/${subj_name}_topup" \
+          --iout="$subj/${subj_name}_topup_corrected_b0.nii.gz"
+
+    bet "$subj/${subj_name}_topup_corrected_b0.nii.gz" \
+        "$subj/${subj_name}_b0_brain.nii.gz" -f 0.25 -g 0 -m
+
+    eddy --imain="$DWI" \
+         --mask="$subj/${subj_name}_b0_brain_mask.nii.gz" \
+         --acqp="$SUBJECTS_DIR/acqparams.txt" \
+         --index="$SUBJECTS_DIR/index.txt" \
+         --bvecs="$BVEC" \
+         --bvals="$BVAL" \
+         --topup="$subj/${subj_name}_topup" \
+         --out="$subj/${subj_name}_eddy"
+
+    dtifit --data="$subj/${subj_name}_eddy.nii.gz" \
+           --mask="$subj/${subj_name}_b0_brain_mask.nii.gz" \
+           --bvecs="$subj/${subj_name}_eddy.eddy_rotated_bvecs" \
+           --bvals="$BVAL" \
+           --out="$subj/${subj_name}_dti"
+
+    flirt -in "$subj/${subj_name}_dti_FA.nii.gz" \
+          -ref "$FSLDIR/data/standard/FMRIB58_FA_1mm" \
+          -omat "$subj/${subj_name}_affine.mat" \
+          -out "$subj/${subj_name}_FA_flirt.nii.gz"
+
+    fnirt --in="$subj/${subj_name}_dti_FA.nii.gz" \
+          --aff="$subj/${subj_name}_affine.mat" \
+          --ref="$FSLDIR/data/standard/FMRIB58_FA_1mm" \
+          --cout="$subj/${subj_name}_warp" \
+          --iout="$subj/${subj_name}_FA_MNI.nii.gz"
+
+    fslmaths "$subj/${subj_name}_FA_MNI.nii.gz" \
+             -s 3.4 "$subj/${subj_name}_FA_MNI_smoothed.nii.gz"
+
+    cp "$subj/${subj_name}_FA_MNI_smoothed.nii.gz" \
+       "$OUTPUT_DIR/${subj_name}_FA_final.nii.gz"
+
+    echo "Finished $subj_name"
+    echo "-------------------------------"
+done
+
+echo "All subjects processed successfully."
