@@ -1,6 +1,6 @@
 # DTI Preprocessing Pipeline for Multimodal Data Fusion Analysis
 
-This repository contains a comprehensive UNIX shell script for automated Diffusion Tensor Imaging (DTI) preprocessing using FSL (FMRIB Software Library) tools. The pipeline is specifically designed to prepare high-quality Fractional Anisotropy (FA) images for **multimodal data fusion and unsupervised learning analysis** using the **Fusion ICA Toolbox (FIT)**.
+This repository contains a comprehensive UNIX shell script for automated Diffusion Tensor Imaging (DTI) preprocessing using FSL (FMRIB Software Library) tools. The pipeline is specifically designed to prepare high-quality Fractional Anisotropy (FA) images for **multimodal data fusion and unsupervised learning analysis** using the **Fusion ICA Toolbox (FIT)**. 
 
 ## Purpose
 
